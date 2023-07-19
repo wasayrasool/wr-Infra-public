@@ -1,0 +1,29 @@
+import boto3
+import argparse
+import json
+from utils import
+
+
+class Shell:
+    def __init__(self, env):
+        self.client = boto3.client("ssm")
+        self.bastion_id = get_bastion_instance_id(env)
+        self.env = env
+
+    def check_response(self, response, timeout=60, exit_on_error=True):
+        return check_response(
+            self.client, self.bastion_id, response, timeout, exit_on_error
+        )
+
+    def create_shell(self):
+        response = self.client.send_command(
+            InstanceIds=[self.bastion_id],
+            DocumentName="AWS-RunShellScript",
+            Parameters={
+              
+            },
+        )
+
+        self.check_response(response)
+
+        print("installed docker")
