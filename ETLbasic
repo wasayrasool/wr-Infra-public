@@ -1,0 +1,75 @@
+import pandas as pd
+import requests
+import statsmodels.api as sm
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+# Data Extraction
+
+# CSV files from Qualtrics and Catalist
+qualtrics_file = 'qualtrics_data.csv'
+catalist_file = 'catalist_data.csv'
+
+qualtrics_df = pd.read_csv(qualtrics_file)
+catalist_df = pd.read_csv(catalist_file)
+
+# API key for accessing BLS data
+bls_api_key = 'YOUR_BLS_API_KEY'
+
+# Data from the Bureau of Labor Statistics API
+bls_endpoint = 'https://api.bls.gov/publicAPI/v2/timeseries/data/'
+bls_series_id = 'YOUR_BLS_SERIES_ID'  # Replace this with the actual BLS series ID you want to fetch
+bls_params = {'seriesid': bls_series_id, 'startyear': '2019', 'endyear': '2021', 'registrationkey': bls_api_key}
+response = requests.get(bls_endpoint, params=bls_params)
+bls_data = response.json()
+
+# Extracting data from the BLS API response (assuming it's in a specific format)
+bls_df = pd.DataFrame(bls_data['Results']['series'][0]['data'])
+
+# Data Cleaning
+
+# Handling missing values in Qualtrics and Catalist data
+qualtrics_df = qualtrics_df.dropna()
+catalist_df = catalist_df.dropna()
+
+# Selecting relevant columns for regression analysis
+qualtrics_selected_columns = ['Age', 'Income', 'Education']
+catalist_selected_columns = ['RegistrationDate', 'partisanscore', 'midterm_turnout_score']
+
+qualtrics_df = qualtrics_df[qualtrics_selected_columns]
+catalist_df = catalist_df[catalist_selected_columns]
+
+# Step 3: Data Analysis - Regression
+
+# Assuming we are performing a simple linear regression using Qualtrics data
+X = qualtrics_df[['Age', 'Income']]
+y = qualtrics_df['Education']
+X = sm.add_constant(X)  # Add a constant term to the regression model
+model = sm.OLS(y, X).fit()
+regression_results = model.summary()
+
+# Step 4: Data Loading - Upload to Database
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://INSERT'
+db = SQLAlchemy(app)
+
+# Create a model for the data table
+class ProcessedData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    age = db.Column(db.Integer)
+    income = db.Column(db.Float)
+    education = db.Column(db.String)
+
+# Save the processed data to the database
+@app.route('/upload_data', methods=['POST'])
+def upload_data():
+    try:
+        data = request.get_json()
+        new_data = ProcessedData(age=data['Age'], income=data['Income'], education=data['Education'])
+        db.session.add(new_data)
+        db.session.commit()
+
+# Run the Flask app on your EC2 instance
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

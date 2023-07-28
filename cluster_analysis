@@ -1,0 +1,79 @@
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+# Load your data
+data = pd.read_csv('CLIENT R1 - Raw Data.csv')
+
+# Specify which variables to include in the clustering
+variables_to_include = ['State', 'Gender', 'Age', 'Education', 'Urbanicity',
+                        '2020 Voter Status', 'Household Income',
+                        'Hispanic', 'Best interests', 'No say in government', 
+                        'Voting is civic duty', 'Qualified to vote', 'Voting generations',
+                        'Party effective simple', 'Person of color', 'Similarity',
+                        'American Identity Importance', 'Latino identity importance',
+                        'County of origin importance', 'More important identity',
+                        'Family accepted as Americans', 'Feel like guests',
+                        'Power', 'This impacts me',
+                        'Generation(possible key segment)', 'Language Usage',
+                        'Language media consumption', 'Religion',
+                        'Class Identity', '2020 voter', 'Party ID',
+                        'Country of Origin']
+
+# Subset the data to only include the variables of interest
+data_subset = data[variables_to_include]
+
+# Convert categorical variables into numerical format using LabelEncoder
+label_encoder = LabelEncoder()
+categorical_cols = data_subset.select_dtypes(include=['object']).columns
+data_subset[categorical_cols] = data_subset[categorical_cols].apply(lambda col: label_encoder.fit_transform(col))
+
+# Scale the data to ensure all features have equal importance
+scaler = StandardScaler()
+data_scaled = pd.DataFrame(scaler.fit_transform(data_subset), columns=data_subset.columns)
+
+# Define a range of clusters that will be evaluated
+clusters_range = range(1, 11)
+
+# For each number of clusters, fit the K-means model and record the within-cluster sum of squares (WCSS)
+WCSS = []
+for num_clusters in clusters_range:
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+    kmeans.fit(data_scaled)
+    WCSS.append(kmeans.inertia_)
+
+# Plot the WCSS against the number of clusters
+plt.figure(figsize=(10, 6))
+plt.plot(clusters_range, WCSS, marker='o', linestyle='--')
+plt.xlabel('Number of Clusters')
+plt.ylabel('Within-Cluster Sum of Squares (WCSS)')
+plt.title('Elbow Method')
+plt.grid(True)
+plt.show()
+
+# Fit the K-means model with the optimal number of clusters
+kmeans = KMeans(n_clusters=4, random_state=42)
+kmeans.fit(data_scaled)
+
+# Make a copy of the original data
+data_subset_with_clusters = data_subset.copy()
+
+# Add the cluster labels to the data copy
+data_subset_with_clusters['Cluster'] = kmeans.labels_
+
+print(data_subset_with_clusters.head())
+
+# Calculate the median values of each variable for each cluster
+cluster_profiles = data_subset_with_clusters.groupby('Cluster').median().reset_index()
+
+# Export the cluster profiles to a CSV file
+cluster_profiles.to_csv('Cluster_Profiles.csv', index=False)
+
+print("Cluster profiles have been saved to 'Cluster_Profiles.csv'")
+
+# Add the cluster labels to the preprocessed data
+data_subset['Cluster'] = kmeans.labels_
+
+# Save the preprocessed data with clusters to a CSV file
+data_subset.to_csv('Preprocessed_Data_with_Clusters.csv', index=False)

@@ -1,0 +1,56 @@
+import pandas as pd
+import statsmodels.api as sm
+
+# Load your data
+data = pd.read_csv('CLIENT R1 - Raw Data.csv')
+
+# Specify your dependent variable
+dep_var = '2020 Voter'
+
+# Specify your independent variables
+ind_vars = ['State', 'Gender', 'Age', 'Education', 'Urbanicity',
+                        '2020 Voter Status', 'Household Income',
+                        'Hispanic', 'Best interests', 'No say in government', 
+                        'Voting is civic duty', 'Qualified to vote', 'Voting generations',
+                        'Party effective simple', 'Person of color', 'Similarity',
+                        'American Identity Importance', 'Latino identity importance',
+                        'County of origin importance', 'More important identity',
+                        'Family accepted as Americans', 'Feel like guests',
+                        'Power', 'This impacts me',
+                        'Generation(possible key segment)', 'Language Usage',
+                        'Language media consumption', 'Religion',
+                        'Class Identity', '2020 voter', 'Party ID',
+                        'Country of Origin']
+
+# Identify categorical and ordinal variables
+categorical_vars = data[ind_vars].select_dtypes(include=['object']).columns.tolist()
+ordinal_vars = [var for var in ind_vars if var not in categorical_vars]
+
+# For each categorical variable, create dummy variables and add them to the data
+for col in categorical_vars:
+    data = pd.concat([data.drop(col, axis=1), pd.get_dummies(data[col], prefix=col, drop_first=True)], axis=1)
+
+# For each ordinal variable, convert to an ordered categorical type and then encode as numbers
+for var in ordinal_vars:
+    data[var] = pd.Categorical(data[var], ordered=True)
+    data[var] = data[var].cat.codes
+
+# Update the list of independent variables to include the dummy variables
+ind_vars = [col for col in data.columns if col != dep_var]
+
+# Handle missing values
+data[ind_vars] = data[ind_vars].apply(pd.to_numeric, errors='coerce')
+data = data.dropna()
+
+# Add a constant to the independent variables matrix
+X = sm.add_constant(data[ind_vars])
+
+# Specify the dependent variable
+y = data[dep_var]
+
+# Fit the model
+model = sm.OLS(y, X)
+results = model.fit()
+
+# Print out the results 
+print(results.summary())
