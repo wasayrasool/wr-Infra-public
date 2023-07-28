@@ -14,16 +14,16 @@ qualtrics_df = pd.read_csv(qualtrics_file)
 catalist_df = pd.read_csv(catalist_file)
 
 # API key for accessing BLS data
-bls_api_key = 'YOUR_BLS_API_KEY'
+bls_api_key = 'BLS_API_KEY'
 
 # Data from the Bureau of Labor Statistics API
 bls_endpoint = 'https://api.bls.gov/publicAPI/v2/timeseries/data/'
-bls_series_id = 'YOUR_BLS_SERIES_ID'  # Replace this with the actual BLS series ID you want to fetch
+bls_series_id = 'bls_series0_id'  
 bls_params = {'seriesid': bls_series_id, 'startyear': '2019', 'endyear': '2021', 'registrationkey': bls_api_key}
 response = requests.get(bls_endpoint, params=bls_params)
 bls_data = response.json()
 
-# Extracting data from the BLS API response (assuming it's in a specific format)
+# Extracting data from the BLS API response
 bls_df = pd.DataFrame(bls_data['Results']['series'][0]['data'])
 
 # Data Cleaning
@@ -39,7 +39,7 @@ catalist_selected_columns = ['RegistrationDate', 'partisanscore', 'midterm_turno
 qualtrics_df = qualtrics_df[qualtrics_selected_columns]
 catalist_df = catalist_df[catalist_selected_columns]
 
-# Step 3: Data Analysis - Regression
+# Data Analysis - Regression
 
 # Assuming we are performing a simple linear regression using Qualtrics data
 X = qualtrics_df[['Age', 'Income']]
@@ -48,7 +48,7 @@ X = sm.add_constant(X)  # Add a constant term to the regression model
 model = sm.OLS(y, X).fit()
 regression_results = model.summary()
 
-# Step 4: Data Loading - Upload to Database
+# Data Loading - Upload to Database
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://INSERT'
