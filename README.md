@@ -1,4 +1,4 @@
-# wr-Infra-public
+# wr-infra-analysis
 Public Snippets of infra and analysis scripts from recent work. Includes:
 Django shell jumpstart
 Generate auth0 set up
